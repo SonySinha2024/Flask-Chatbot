@@ -27,7 +27,7 @@ log = log.getLogger(__name__)
 config_file_path = 'C:/frontend/Flask-Chatbot/config/.env'
 load_dotenv(dotenv_path=config_file_path)
 
-google_api_key = "AIzaSyDfVIOcSaPeaRPbAA_pMbHJe9YZAySy-Ig"
+google_api_key = ""
 
 ## google_api_key = os.getenv('google_api_key')
 #google_api_key = ""
