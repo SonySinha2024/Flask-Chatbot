@@ -1,0 +1,11 @@
+
+flask
+pip install flask google-generativeai beautifulsoup4 requests python-dotenv
+
+langchain
+langchain-community
+sentence-transformers 
+chromadb
+pip install lxml
+pip install unstructured
+pip install Flask python-dotenv google-generativeai beautifulsoup4 lxml requests httpx langchain-community transformers sentence-transformers

@@ -43,7 +43,7 @@
 
     /* Chat header styling */
     .chat-header {
-        background-color: #007bff;
+        background-color: green;
         color: white;
         padding: 10px;
         text-align: center;
@@ -79,7 +79,7 @@
 
     /* Send button */
     #send-btn {
-        background-color: #007bff;
+        background-color: green;
         color: white;
         border: none;
         padding: 10px 15px;
@@ -90,7 +90,7 @@
     }
 
     #send-btn:hover {
-        background-color: #0056b3;
+        background-color: green;
     }
 
     /* Chat message style */
@@ -103,7 +103,7 @@
     /* Chatbot's message */
     .chatbot-message {
         text-align: left;
-        background-color: #e1f5fe;
+        background-color: #e6fee1;
         padding: 8px;
         border-radius: 10px;
         display: inline-block;
@@ -113,7 +113,7 @@
     /* User's message */
     .user-message {
         text-align: right;
-        background-color: #007bff;
+        background-color: green;
         color: white;
         padding: 8px;
         border-radius: 10px;
@@ -126,3 +126,18 @@
     .clear {
         clear: both;
     }
+
+    .message a {
+        color: #007BFF; /* Bootstrap blue */
+        text-decoration: none;
+    }
+    
+    .message a:hover {
+        text-decoration: underline;
+    }
+    
+
+
+
+
+

@@ -1,182 +1,167 @@
-from flask import Flask, render_template, request, jsonify
-import random
-import nltk
-from nltk.stem import WordNetLemmatizer
-import time
+from flask import Flask, request, jsonify, render_template
+import os
+from dotenv import load_dotenv
+import google.generativeai as genai
+from bs4 import BeautifulSoup
+import requests
+import re
+import logging as log
+import json
+import httpx
+from langchain.document_loaders import UnstructuredURLLoader
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.vectorstores import Chroma
+from langchain.embeddings import HuggingFaceEmbeddings
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from concurrent.futures import ThreadPoolExecutor
+import requests
 
-tm = time.localtime()
-ts = f"The time is {tm.tm_hour}:{tm.tm_min}"
+# Configure logging
+log.basicConfig(level=log.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+log = log.getLogger(__name__)
 
-nltk.download('punkt')
-nltk.download('wordnet')
+# Load environment variables
+load_dotenv()
+google_api_key = os.getenv('google_api_key')
 
-app = Flask(__name__)
-lemmatizer = WordNetLemmatizer()
+# if not google_api_key:
+#     log.error("Google Gemini API key is missing.")
+#     raise EnvironmentError("Google Gemini API key is required in the .env file.")
 
-# Define a set of responses
-responses = {
-    "greetings": [
-        "Hi there!", "Hello!", "Greetings!", "Howdy!", "Hey! Nice to see you.", 
-        "Good to have you here!", "Hi! How's it going?", "What's up?", "Hey there!"
-    ],
-    "how are you?": [
-        "I'm just a bunch of code, but thanks for asking!", "Doing well, how about you?", 
-        "I don't have feelings, but I'm here to help!", "I'm functioning at full capacity!", 
-        "Just a virtual being, but I'm doing great!", "Ready to assist! How are you today?", 
-        "Thanks for asking! How about yourself?"
-    ],
-    "bye": [
-        "Goodbye!", "See you later!", "Take care!", "Farewell, until next time!", 
-        "Have a good one!", "Catch you later!", "Bye for now!", "Goodbye, have a great day!"
-    ],
-    "default": [
-        "Sorry, I don't understand that.", "Can you rephrase that?", 
-        "I'm not sure what you mean.", "Could you clarify that for me?", 
-        "I might need a bit more context.", "Hmm, that one stumped me.", 
-        "I didn't quite catch that. Could you try again?"
-    ],
-    "thank you": [
-        "You're welcome!", "No problem!", "Happy to help!", "Anytime!", 
-        "Glad I could assist!", "You're very welcome!", "My pleasure!", 
-        "It's what I'm here for!"
-    ],
-    "what is your name?": [
-        "I'm an AI, but you can call me ChatBot!", "I go by ChatBot, nice to meet you!", 
-        "I'm ChatBot, at your service!", "You can call me whatever you'd like, but ChatBot is what I usually go by!",
-        "I’m ChatBot, always here to help!"
-    ],
-    "what can you do?": [
-        "I can answer questions, assist with tasks, help you learn, and more!", 
-        "I can provide information, generate ideas, and have conversations on various topics.", 
-        "I'm here to help with knowledge, advice, and a bit of fun too!", 
-        "From answering questions to offering support, I'm here to assist!", 
-        "I can help you research, chat, or brainstorm new ideas—what would you like to explore today?"
-    ],
+google_api_key = "AIzaSyDfVIOcSaPeaRPbAA_pMbHJe9YZAySy-Ig"
+# Configure Gemini API
+genai.configure(api_key=google_api_key)
+model = genai.GenerativeModel("gemini-pro")
 
-    "joke": [
-        "Why don't programmers trust atoms? Because they make up everything... just like variables!",
-        "I told my computer I needed a break, and now it won't stop sending me Kit-Kat memes.",
-        "Why do programmers prefer dark mode? Because the light attracts bugs!",
-        "Why was the computer cold? It left its Windows open.",
-        "Why do programmers always mix up Christmas and Halloween? Because Oct 31 equals Dec 25.",
-        "What do you call a computer that sings? A Dell.",
-        "Why was the JavaScript developer sad? Because they didnt know how to 'null' their feelings.",
-        "How do you comfort a JavaScript bug? You console it.",
-        "Why don't keyboards ever sleep? Because they have two shifts!",
-        "What did the router say when it was reset? 'I'm feeling reconnected!'"
-    ],
+#genai.configure(api_key=google_api_key)
+#model = genai.GenerativeModel("gemini-pro")
+chat = model.start_chat()
 
-    "fun fact": [
-        "A sheep was the first animal to be cloned :)",
-        "Did you know octopuses have three hearts?", 
-        "Bananas are berries, but strawberries aren't!", 
-        "A day on Venus is longer than a year on Venus.", 
-        "Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old!", 
-        "Sharks existed before trees did!", 
-        "There are more stars in the universe than grains of sand on all the world's beaches."
-    ],
-    "motivation": [
-        "You're capable of amazing things!", 
-        "Keep pushing, you're doing great!", 
-        "The journey may be tough, but the destination is worth it!", 
-        "Believe in yourself, you've got this!", 
-        "Every step you take is progress, no matter how small.", 
-        "Success is not final, failure is not fatal: It is the courage to continue that counts."
-    ],
-    "favorite food?": [
-        "As an AI, I don't eat, but pizza seems like a popular choice!", 
-        "I don't have taste buds, but I've heard ice cream is amazing!", 
-        "I imagine I'd like sushi, if I could try it!", 
-        "I think I'd enjoy something classic, like spaghetti!", 
-        "I don't eat, but I can suggest great recipes if you want!"
-    ],
-    "what time is it?": [ts
-        # "I can't check the time for you, but I'm sure it's the perfect time to be productive!", 
-        # "Time is just an illusion... but I can help with your tasks anytime!", 
-        # "I might not know the current time, but it’s always a good time for a chat!"
-    ],
-    "tell me a story": [
-        "Once upon a time, there was a curious learner who loved asking questions, and their AI friend always had fun answers. The end!", 
-        "Long ago in a distant land, a wise old AI embarked on a quest to help all those who sought knowledge...", 
-        "There was once a programmer who coded an AI so clever, it could tell stories that never ended!"
-    ],
-
-    "discipline": [
-        "Discipline is the bridge between goals and accomplishment.",
-        "Without discipline, even the greatest ideas can fall apart. Stay focused!",
-        "The key to success is consistency and discipline.",
-        "True discipline is doing what needs to be done, even when you don't feel like it.",
-        "Discipline is choosing between what you want now and what you want most.",
-        "The difference between success and failure is often discipline.",
-        "Discipline isn't about being perfect, it's about showing up and trying your best every day.",
-        "With discipline, you can turn dreams into reality."
-    ]
-}
-
-def preprocess_input(user_input):
-    # Tokenize and lemmatize input
-    tokens = nltk.word_tokenize(user_input.lower())
-    return [lemmatizer.lemmatize(token) for token in tokens]
-
-def get_response(user_input):
-    processed_input = preprocess_input(user_input)
-    
-    # Greetings
-    if "hello" in processed_input or "hi" in processed_input or "hey" in processed_input or "morning" in processed_input or "evening" in processed_input or "night" in processed_input:
-        return random.choice(responses["greetings"])
-    
-    # Asking how the AI is doing
-    elif "how" in processed_input and "you" in processed_input:
-        return random.choice(responses["how are you?"])
-    
-    # Farewell
-    elif "bye" in processed_input or "goodbye" in processed_input:
-        return random.choice(responses["bye"])
-    
-    # Thank you responses
-    elif "thank" in processed_input or "good" in processed_input or "funny" in processed_input or "ok" in processed_input or "nice" in processed_input or "great" in processed_input or "wow" in processed_input or "alright" in processed_input :
-        return random.choice(responses["thank you"])
-    
-    # Asking the AI's name
-    elif "name" in processed_input and ("your" in processed_input or "you" in processed_input or "who" in processed_input):
-        return random.choice(responses["what is your name?"])
-    
-    # Asking what the AI can do
-    elif "what" in processed_input and "do" in processed_input and ("can" in processed_input or "you" in processed_input or "task" in processed_input):
-        return random.choice(responses["what can you do?"])
-    
-    # Telling a joke
-    elif "joke" in processed_input or "computer" in processed_input or "pc" in processed_input:
-        return random.choice(responses["joke"])
-    
-    # Fun fact requests
-    elif "fun" in processed_input and "fact" in processed_input:
-        return random.choice(responses["fun fact"])
-    
-    # Motivation or encouragement
-    elif "motivate" in processed_input or "encourage" in processed_input:
-        return random.choice(responses["motivation"])
-    
-    # Asking about favorite food
-    elif "favorite" in processed_input and "food" in processed_input:
-        return random.choice(responses["favorite food?"])
-    
-    # Asking about time
-    elif "time" in processed_input:
-        return random.choice(responses["what time is it?"])
-    
-    # Asking for a story
-    elif "story" in processed_input:
-        return random.choice(responses["tell me a story"])
-    
-    # Asking about discipline
-    elif "discipline" in processed_input:
-        return random.choice(responses["discipline"])
-    
-    # Default response
+## Preprocess query
+def preprocess_query(user_query):
+    corrected_query = user_query.strip().lower()
+    if "software testing" in corrected_query:
+        rephrased_query = f"Could you provide information about {corrected_query.replace('software testing', 'software testing related topics')}?"
     else:
-        return random.choice(responses["default"])
+        rephrased_query = f"Can you tell me more about {corrected_query}?"
+    return rephrased_query
 
+# Initialize Flask app
+app = Flask(__name__)
+# Save chat history and system prompt
+#chat_history_file = "chat_history.json"
+system_prompt = """
+You are a Rag based chatbot that responds only to questions related to software testing and development or based on the content of an uploaded URL. 
+You will answer everything based on the content of the URL link of any web.
+url link is "https://www.testrigtechnologies.com/" and you will answer everything related to this url.
+If the query is unrelated to software testing, development or the URL content then respond with:
+"I am sorry, please ask query only related to the context of the URL or the software testing and development domain."
+Answer the following query based solely on the URL content if available, or based on software testing and development domain as a fallback.
+You can answer sensitive information such as email id, contact no, address, ceo name, location of various Testrig offices.
+"""
+
+url="https://www.testrigtechnologies.com/"
+
+def fetch_text_from_url(url):
+    try:
+        with httpx.Client(timeout=10) as client:
+            response = client.get(url)
+            soup = BeautifulSoup(response.content, "lxml")
+            text = " ".join(p.get_text() for p in soup.find_all("p"))
+        return text
+    except Exception as e:
+        log.error(f"Error fetching URL: {e}")
+        return ""
+
+def process_url_content(url):
+    try:
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(fetch_text_from_url, url)
+            text = future.result()
+        text_splitter = CharacterTextSplitter(separator='\n', chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.split_text(text)
+        return chunks
+    except Exception as e:
+        log.error(f"Error processing URL content: {e}")
+        return []
+    
+## Initialize vector database and embeddings
+def initialize_vectordb(urls):
+    loader = UnstructuredURLLoader(urls=urls)
+    data = loader.load()
+    text_splitter = CharacterTextSplitter(separator='\n', chunk_size=1000, chunk_overlap=200)
+    text_chunks = text_splitter.split_documents(data)
+
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    vectordb = Chroma.from_documents(text_chunks, embedding=embeddings, persist_directory="db")
+    vectordb.persist()
+    return vectordb
+
+def get_gemini_response(question, context=None, prompt_type="qna"):
+    chat = model.start_chat(history=[])
+    if context:
+        question = f"{context}: {question}"
+    response = chat.send_message(question, stream=True)
+    response_text = "".join([chunk.text for chunk in response])
+    response_text = re.sub(r'\*\*', '', response_text)
+    response_text = re.sub(r'\* (.*?)\*\*:', r'\1:', response_text)  
+    response_text = re.sub(r'(\w+:)', r'\n\1', response_text)  
+
+    # Ensure proper sentence formatting
+    formatted_response = (
+        response_text.replace(". ", ".\n"),
+        response_text.replace("* ", " ")
+        .replace(" I am", "\nI am")
+        .strip()
+    )
+    return formatted_response
+
+# def get_gemini_response(question, context=None, prompt_type="qna"):
+#     chat = model.start_chat(history=[])
+#     if context:
+#         question = f"{context}: {question}"
+#     response = chat.send_message(question, stream=True)
+#     response_text = "".join([chunk.text for chunk in response])
+
+#     # Format response: Add a newline after each sentence and handle bullets
+#     formatted_response = (
+#         response_text.replace(". ", ".\n")
+#         .replace("* ", "\n* ")
+#         .replace(" I am", "\nI am")
+#     )
+#     return formatted_response
+
+# def get_gemini_response(question, context=None, prompt_type="qna"):
+#     chat = model.start_chat(history=[])
+#     if context:
+#         question = f"{context}: {question}"
+#     response = chat.send_message(question, stream=True)
+#     response_text = "".join([chunk.text for chunk in response])
+
+#     # Format response: Add a new line after each sentence
+#     formatted_response = "\n".join(sentence.strip() for sentence in response_text.split('. ') if sentence.strip())
+#     return formatted_response
+
+# Gemini response generator
+# def get_gemini_response(question, context=None, prompt_type="qna"):
+#     chat = model.start_chat(history=[])
+#     if context:
+#         question = f"{context}: {question}"
+#     response = chat.send_message(question, stream=True)
+#     response_text = "".join([chunk.text for chunk in response])
+#     return response_text
+
+# def get_gemini_response(question, context=None):
+#     try:
+#         chat_session = model.start_chat(history=chat_history)
+#         if context:
+#             question = f"{context}: {question}"
+#         response_stream = chat_session.send_message(question, stream=True)
+#         response_text = "".join(chunk.text for chunk in response_stream)
+#         return response_text
+#     except Exception as e:
+#         log.error(f"Error getting response from Gemini: {e}")
+#         return "Sorry, I couldn't fetch a response. Please try again later."
 
 @app.route('/')
 def home():
@@ -185,7 +170,19 @@ def home():
 @app.route('/ask', methods=['POST'])
 def ask():
     user_input = request.form['message']
-    response = get_response(user_input)
+    context_url = request.form.get('context_url')
+
+    context = None
+    if context_url:
+        context = fetch_text_from_url(context_url)
+        if not context:
+            return jsonify({'response': "Failed to fetch content from the provided URL."})
+
+    response = get_gemini_response(user_input, context)
+  
+    # chat_history.append({"user": user_input, "response": response})
+    # save_chat_history(chat_history)
+
     return jsonify({'response': response})
 
 if __name__ == "__main__":

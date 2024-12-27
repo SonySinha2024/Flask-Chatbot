@@ -1,0 +1,10 @@
+[
+    {
+        "user": "hi",
+        "response": "Hello! How can I assist you today?"
+    },
+    {
+        "user": "tell me automation testing service by testrig",
+        "response": "Sorry, I couldn't fetch a response. Please try again later."
+    }
+]

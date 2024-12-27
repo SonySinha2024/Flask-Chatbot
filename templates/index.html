@@ -8,41 +8,38 @@
 </head>
 <body>
     <div class="layout-container">
-        <!-- Left column with content -->
+        
         <div class="left-column">
-            <h1>Welcome to Our Chatbot!</h1>
+            <h1>Welcome to Testrig Technology Chatbot</h1>
             <p>
-                This is your friendly virtual assistant. Here are some things you can ask about:
+                💁I am your Software Testing Friendly Virtual Assistant :
             </p>
             <ul>
-                <li>Joke</li>
-                <li>Time</li>
-                <li>Discipline</li>
-                <li>favorite</li>
-                <li>Motivation</li>
-                <li>Fun facts</li>
-                <li>Story</li>
-                <li>Basic conversation</li>
+                <li>Manual Testing</li>
+                <li>Automation Testing</li>
+                <li>Security Testing</li>
+                <li>Performance Testing</li>
+                <li>AI Testing</li>
+                <li>Mobile Testing</li> 
+                <li>API Testing</li>
+                <li>On Demand QA Testing Services</li>
             </ul>
             <p>
-                Feel free to interact with the chatbot on the right side of the screen. 
-                It's available 24/7 to help answer your questions or just chat with you.
+                💁 I am Testrig Assistant,please feel free to chat with me.
             </p>
             <p>
                 Below are some tips for better interaction:
             </p>
-            <ul>
+            <!-- <ul>
                 <li>Be clear with your questions.</li>
                 <li>Ask one thing at a time for better answers.</li>
                 <li>Try different phrasings if you don't get the answer you're looking for.</li>
-            </ul>
-            <p style="color: blue;">We still working on this bot.....</p>
-        </div>
-
-        <!-- Chatbot container placed at the right -->
+            </ul> -->
+            <p style="color:green;">Testrig Technology(QA and Software Testing Company)</p>
+        </div> 
         <div class="chat-container">
             <div class="chat-header">
-                <h2>Chatbot</h2>
+                <h2>Testrig Techbot</h2>
             </div>
             <div id="chat-window" class="chat-window"></div>
             <div class="chat-input-container">
@@ -51,6 +48,13 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.getElementById('user-input').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            document.getElementById('send-btn').click();}
+        });
+    </script>
 
     <script>
         document.getElementById('send-btn').onclick = function() {
@@ -68,27 +72,35 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    appendMessage('Chatbot', data.response, 'chatbot-message');
+                    appendMessage('Testrig Bot', data.response, 'chatbot-message');
                 });
             }
         };
 
-        function appendMessage(sender, message, messageClass) {
-            const chatWindow = document.getElementById('chat-window');
-            chatWindow.innerHTML += `
-                <p class="message ${messageClass}">
-                    <strong>${sender}:</strong> ${message}
-                </p>
-                <div class="clear"></div>
-            `;
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
+       
 
-        document.getElementById('user-input').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                document.getElementById('send-btn').click();
-            }
-        });
+        // function appendMessage(sender, message, messageClass) {
+        //   const chatWindow = document.getElementById('chat-window');
+        //   const formattedMessage = message.replace(/\n/g, '<br>'); // Replace '\n' with <br> for HTML
+        //   chatWindow.innerHTML += `
+        //   <p class="message ${messageClass}">
+        //     <strong>${sender}:</strong> ${formattedMessage}
+        //   </p>
+        //   <div class="clear"></div>
+        // `;
+        // chatWindow.scrollTop = chatWindow.scrollHeight; // Auto-scroll to the latest message
+        //  }
+
+        function appendMessage(sender, message, messageClass) {
+          const chatWindow = document.getElementById('chat-window');
+          const formattedMessage = message.replace(/\n/g, '<br>'); // Replace '\n' with <br> for HTML
+          chatWindow.innerHTML += `
+          <p class="message ${messageClass}">
+            <strong>${sender}:</strong> ${message}
+          </p>
+          <div class="clear"></div> `;
+        chatWindow.scrollTop = chatWindow.scrollHeight;} // Auto-scroll to the latest message}
+        
     </script>
 </body>
 </html>
