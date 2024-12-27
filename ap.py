@@ -22,7 +22,7 @@ google_api_key = os.getenv('google_api_key')
 genai.configure(api_key=google_api_key)
 model = genai.GenerativeModel("gemini-pro")
 
-google_api_key = "AIzaSyDfVIOcSaPeaRPbAA_pMbHJe9YZAySy-Ig"
+google_api_key = ""
 
 app = Flask(__name__)
 
